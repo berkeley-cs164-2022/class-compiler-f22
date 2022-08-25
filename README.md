@@ -9,3 +9,5 @@ Inside utop:
 `open Cs164.Compile;;`
 
 `compile_and_run "56";;`
+
+Remember that you must make runtime.o before you can run the line above!
