@@ -1,4 +1,4 @@
-The in-class compiler status after the "Unary Operations" lecture.  See lecture notes for much more detail.
+The in-class compiler *and interpreter* status after the first "Booleans" lecture, the one in which we implement Booleans for the interpreter.  See lecture notes for much more detail.
 
 To run:
 
@@ -6,6 +6,6 @@ To run:
 
 Inside utop:
 
-`open Cs164.Compile;;`
+`open Cs164.Interp;;`
 
-`compile_and_run "(add1 56)";;`
+`interp "(not (num? 56))";;`

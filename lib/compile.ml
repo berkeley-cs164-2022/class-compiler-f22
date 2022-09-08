@@ -34,3 +34,11 @@ let compile_to_file (program: string): unit =
     let inp = Unix.open_process_in "./program" in
     let r = input_line inp in
     close_in inp; r
+
+
+let difftest (examples : string list) =
+    let results = List.map (fun ex -> (compile_and_run ex, Interp.interp ex)) examples in 
+        List.for_all (fun (r1, r2) -> r1=r2) results
+
+let test () =
+    difftest ["32"; "(add1 (add1 40))"; "(sub1 43)"]
