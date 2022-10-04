@@ -53,12 +53,23 @@ let ensure_pair (op: operand) : directive list =
 
 let stack_address (stack_index : int) = MemOffset (Reg Rsp, Imm stack_index)
 
+let align_stack_index (stack_index : int) : int =
+    if stack_index mod 16 = -8 then stack_index else stack_index - 8
+
 let rec compile_exp tab (stack_index : int) (program:s_exp): directive list =
     match program with
     | Num n ->
         [Mov (Reg Rax, operand_of_num n)]
     | Sym "true" -> [Mov (Reg Rax, operand_of_bool true)]
     | Sym "false" -> [Mov (Reg Rax, operand_of_bool false)]
+    | Lst [Sym "read-num"] ->
+        [
+            Mov (stack_address stack_index, Reg Rdi);
+            Add (Reg Rsp, Imm (align_stack_index stack_index));
+            Call "read_num";
+            Sub (Reg Rsp, Imm (align_stack_index stack_index));
+            Mov (Reg Rdi, stack_address stack_index)
+            ]
     | Lst [Sym "pair"; e1; e2] ->
         compile_exp tab stack_index e1
         @ [Mov (stack_address stack_index, Reg Rax)]
@@ -175,15 +186,15 @@ let rec compile_value (stack_index : int) (v : Interp.value) =
         ; Or (Reg Rax, Imm pair_tag)
         ; Add (Reg Rdi, Imm 16) ]
 
-let compile (program : s_exp) : string =
+let compile_weird (program : s_exp) : string =
   [Global "entry"; Label "entry"]
   @ compile_value (-8) (Interp.interp_exp Symtab.empty program)
   @ [Ret]
   |> List.map string_of_directive
   |> String.concat "\n"
 
-let compile_old (program:s_exp): string =
-    [Global "entry"; Extern "error"; Label "entry"] @
+let compile (program:s_exp): string =
+    [Global "entry"; Extern "error"; Extern "read_num"; Label "entry"] @
     compile_exp Symtab.empty (-8) program @
     [Ret]
     |> List.map string_of_directive |> String.concat "\n"
