@@ -169,30 +169,6 @@ let rec compile_exp tab (stack_index : int) (program:s_exp): directive list =
         @ lf_to_bool
     | e -> raise (BadExpression e)
 
-let rec compile_value (stack_index : int) (v : Interp.value) =
-  match v with
-  | Number n ->
-      [Mov (Reg Rax, operand_of_num n)]
-  | Boolean b ->
-      [Mov (Reg Rax, operand_of_bool b)]
-  | Pair (v1, v2) ->
-      compile_value stack_index v1
-      @ [Mov (stack_address stack_index, Reg Rax)]
-      @ compile_value (stack_index - 8) v2
-      @ [ Mov (Reg R8, stack_address stack_index)
-        ; Mov (MemOffset (Reg Rdi, Imm 0), Reg R8)
-        ; Mov (MemOffset (Reg Rdi, Imm 8), Reg Rax)
-        ; Mov (Reg Rax, Reg Rdi)
-        ; Or (Reg Rax, Imm pair_tag)
-        ; Add (Reg Rdi, Imm 16) ]
-
-let compile_weird (program : s_exp) : string =
-  [Global "entry"; Label "entry"]
-  @ compile_value (-8) (Interp.interp_exp Symtab.empty program)
-  @ [Ret]
-  |> List.map string_of_directive
-  |> String.concat "\n"
-
 let compile (program:s_exp): string =
     [Global "entry"; Extern "error"; Extern "read_num"; Label "entry"] @
     compile_exp Symtab.empty (-8) program @
@@ -212,6 +188,16 @@ let compile_to_file (program: string): unit =
     let inp = Unix.open_process_in "./program" in
     let r = input_line inp in
     close_in inp; r
+
+let compile_and_run_io (program : string) (input : string) : string =
+  compile_to_file program ;
+  ignore (Unix.system "nasm program.s -f macho64 -o program.o") ;
+  ignore (Unix.system "gcc program.o runtime.c -o program") ;
+  let inp, outp = Unix.open_process "./program" in
+  output_string outp input ;
+  close_out outp ;
+  let r = input_all inp in
+  close_in inp ; r
 
 let compile_and_run_err (program: string) :string =
     try compile_and_run program with BadExpression _ -> "ERROR"
