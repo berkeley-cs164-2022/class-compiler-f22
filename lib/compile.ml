@@ -168,8 +168,9 @@ let rec compile_exp tab (stack_index : int) (program:s_exp): directive list =
         ensure_num (Reg Rax) @
         [Mov (stack_address stack_index, Reg Rax)] @
         compile_exp tab (stack_index - 8) e2 @
-        ensure_num (Reg Rax) @
-        [Mov (Reg R8, stack_address stack_index)] @
+        ensure_num (Reg Rax)  @
+        [Mov (Reg R8, Reg Rax)] @
+        [Mov (Reg Rax, stack_address stack_index)] @
         [Sub (Reg Rax, Reg R8)]
     | Lst [Sym "="; e1; e2] ->
         compile_exp tab stack_index e1 @ 
