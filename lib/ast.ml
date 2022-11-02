@@ -57,9 +57,23 @@ type expr =
   | Do of expr list
   | Num of int
   | Var of string
-  | Call of string * expr list
+  | Call of expr * expr list
   | True
   | False
+
+type expr_lam =
+  | Prim0 of prim0
+  | Prim1 of prim1 * expr_lam
+  | Prim2 of prim2 * expr_lam * expr_lam
+  | Let of string * expr_lam * expr_lam
+  | If of expr_lam * expr_lam * expr_lam
+  | Do of expr_lam list
+  | Num of int
+  | Var of string
+  | Call of expr_lam * expr_lam list
+  | True
+  | False
+  | Lambda of string list * expr_lam
 
 type defn = {name: string; args: string list; body: expr}
 
@@ -93,10 +107,41 @@ let rec expr_of_s_exp : s_exp -> expr = function
         ( Option.get (prim2_of_string prim)
         , expr_of_s_exp arg1
         , expr_of_s_exp arg2 )
-  | Lst (Sym f :: args) ->
-      Call (f, List.map expr_of_s_exp args)
+  | Lst (f :: args) ->
+      Call (expr_of_s_exp f, List.map expr_of_s_exp args)
   | e ->
       raise (BadSExpression e)
+
+let rec expr_of_expr_lam (defns : defn list ref) : expr_lam -> expr = function
+  | Num x ->
+      Num x
+  | Var s ->
+      Var s
+  | True ->
+      True
+  | False ->
+      False
+  | If (test_exp, then_exp, else_exp) ->
+      If
+        ( expr_of_expr_lam defns test_exp
+        , expr_of_expr_lam defns then_exp
+        , expr_of_expr_lam defns else_exp )
+  | Let (var, exp, body) ->
+      Let (var, expr_of_expr_lam defns exp, expr_of_expr_lam defns body)
+  | Prim0 p ->
+      Prim0 p
+  | Prim1 (p, e) ->
+      Prim1 (p, expr_of_expr_lam defns e)
+  | Prim2 (p, e1, e2) ->
+      Prim2 (p, expr_of_expr_lam defns e1, expr_of_expr_lam defns e2)
+  | Do exps ->
+      Do (List.map (expr_of_expr_lam defns) exps)
+  | Call (exp, args) ->
+      Call (expr_of_expr_lam defns exp, List.map (expr_of_expr_lam defns) args)
+  | Lambda (args, body) ->
+      let name = Util.gensym "_lambda" in
+      defns := {name; args; body= expr_of_expr_lam defns body} :: !defns ;
+      Var name
 
 let program_of_s_exps (exps : s_exp list) : program =
   let rec get_args args =
