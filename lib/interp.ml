@@ -2,29 +2,37 @@ open S_exp
 open Ast
 open Util
 
-type value = Number of int | Boolean of bool | Pair of (value * value)
+type value =
+    | Number of int
+    | Boolean of bool
+    | Pair of (value * value)
+    | Function of string
 
 let rec string_of_value (v: value) : string =
     match v with
     | Number n -> string_of_int n
     | Boolean b -> if b then "true" else "false"
     | Pair (v1, v2) -> Printf.sprintf "(pair %s %s)" (string_of_value v1) (string_of_value v2)
+    | Function _ -> "<function>"
 
 let input_channel = ref stdin
 let output_channel = ref stdout
 
 let rec interp_exp (defns : defn list) (env: value symtab) (exp:expr): value =
     match exp with
-    | Call (f, args) when is_defn defns f ->
-        let defn = get_defn defns f in 
+    | Call (f, args) -> (
         let vals = List.map (interp_exp defns env) args in 
-        let fenv = (List.combine defn.args vals) |> Symtab.of_list in 
-        if List.length args = List.length defn.args then    
-            interp_exp defns fenv defn.body
-        else
-            raise (BadExpression exp)
-    | Call _ ->
-        raise (BadExpression exp)
+        let fv = interp_exp defns env f in
+        match fv with
+        | Function name ->
+            let defn = get_defn defns name in
+            let fenv = (List.combine defn.args vals) |> Symtab.of_list in 
+            if List.length args = List.length defn.args then    
+                interp_exp defns fenv defn.body
+            else
+                raise (BadExpression exp)
+        | _ ->  raise (BadExpression exp)
+    )
     | Num n -> Number n
     | True -> Boolean true
     | False -> Boolean false
@@ -54,6 +62,8 @@ let rec interp_exp (defns : defn list) (env: value symtab) (exp:expr): value =
     )
     | Var var when Symtab.mem var env -> 
         Symtab.find var env
+    | Var var when is_defn defns var ->
+        Function var
     | Var _ ->
         raise (BadExpression exp)
     | Let (var, e, body) ->
