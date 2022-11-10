@@ -33,3 +33,12 @@
 
 (define (f g) (g 2))
 (let ((y 3)) (print (f (lambda (x) (+ x y)))))
+
+(define (retlam)
+    (let ((x 3))
+        (lambda () x)
+    )
+)
+(let ((l (retlam)))
+    (print (l))
+)

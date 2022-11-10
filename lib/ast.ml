@@ -77,7 +77,7 @@ type expr_lam =
   | False
   | Lambda of string list * expr_lam
 
-type defn = {name: string; args: string list; body: expr}
+type defn = {name: string; args: string list; body: expr; toplevel: bool}
 
 type program = {defns: defn list; body: expr}
 
@@ -152,7 +152,7 @@ let rec expr_of_expr_lam (defns : defn list ref) : expr_lam -> expr = function
   | Lambda (args, body) ->
       let name = gensym "_lambda" in
       let body = expr_of_expr_lam defns body in
-      defns := {name; args; body} :: !defns ;
+      defns := {name; args; body; toplevel=false} :: !defns ;
       Closure name
 
 let program_of_s_exps (exps : s_exp list) : program =
@@ -169,7 +169,7 @@ let program_of_s_exps (exps : s_exp list) : program =
   let get_defn = function
     | Lst [Sym "define"; Lst (Sym name :: args); body] ->
         let args = get_args args in
-        {name; args; body= body |> expr_lam_of_s_exp |> expr_of_expr_lam defns}
+        {name; args; body= body |> expr_lam_of_s_exp |> expr_of_expr_lam defns; toplevel=true}
     | e ->
         raise (BadSExpression e)
   in
