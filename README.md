@@ -1,4 +1,4 @@
-The in-class compiler status after class session about parsing.  See lecture notes for more detail.
+The in-class compiler status after class sessions about first-class functions.  See lecture notes for more detail.
 
 To run:
 
@@ -6,6 +6,13 @@ To run:
 
 Inside utop:
 
-`open Cs164.Handparser2;;`
+`open Cs164.Compile;;`
 
-`parse "2 + 3 * 10";;`
+`compile_and_run "(define (retlam)
+    (let ((x 3))
+        (lambda () x)
+    )
+)
+(let ((l (retlam)))
+    (print (l))
+)";;`
